@@ -56,12 +56,7 @@ namespace Azureblob2.Controllers
             var blobs = await _blobService.ListBlobsAsync();
             return Ok(blobs);
         }
-        public class LoginRequest
-        {
-            public string UserId { get; set; } = null!;
-            public string Password { get; set; } = null!;
-            public string Role { get; set; } = null!;
-        }
+
         [HttpPost("Login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest loginRequest)
         {
