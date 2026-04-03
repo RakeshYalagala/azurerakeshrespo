@@ -1,0 +1,140 @@
+trigger:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  buildConfiguration: 'Release'
+
+stages:
+  # ==================== BUILD STAGE ====================
+  - stage: Build
+    displayName: 'Build Stage'
+    jobs:
+      - job: BuildJob
+        displayName: 'Build and Test'
+        steps:
+          - task: UseDotNet@2
+            inputs:
+              packageType: 'sdk'
+              version: '8.0.x'
+            displayName: 'Install .NET 8.0 SDK'
+          
+          - script: dotnet restore
+            displayName: 'Restore NuGet Packages'
+
+          - script: dotnet build --configuration $(buildConfiguration)
+            displayName: 'Compile Code'
+          
+          - script: dotnet test --configuration $(buildConfiguration)
+            displayName: 'Execute Unit Tests'
+
+  # ==================== PUBLISH STAGE ====================
+  - stage: Publish
+    displayName: 'Publish Stage'
+    dependsOn: Build
+    condition: succeeded()
+    jobs:
+      - job: PublishJob
+        displayName: 'Publish Artifacts'
+        steps:
+          # Publish the application
+          - script: dotnet publish --configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)
+            displayName: 'Publish Application'
+          
+          # Create a zip file from published files
+          - task: ArchiveFiles@2
+            displayName: 'Create Zip Package'
+            inputs:
+              rootFolderOrFile: '$(Build.ArtifactStagingDirectory)'
+              includeRootFolder: false
+              archiveType: 'zip'
+              archiveFile: '$(Build.ArtifactStagingDirectory)/app.zip'
+              replaceExistingArchive: true
+          
+          # Upload the zip file as artifact
+          - task: PublishBuildArtifacts@1
+            inputs:
+              PathtoPublish: '$(Build.ArtifactStagingDirectory)/app.zip'
+              ArtifactName: 'drop'
+            displayName: 'Upload Artifacts'
+
+  # ==================== DEPLOY STAGE ====================
+  - stage: Deploy
+    displayName: 'Deploy to Azure'
+    dependsOn: Publish
+    condition: succeeded()
+    variables:
+      - group: Secrets
+    jobs:
+      - deployment: DeployToAzure
+        displayName: 'Deploy Application to Azure App Service'
+        environment: 'production'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                # STEP 1: Download the artifact
+                - task: DownloadBuildArtifacts@1
+                  displayName: 'Download Artifacts from Cloud'
+                  inputs:
+                    buildType: 'current'
+                    artifactName: 'drop'
+                    downloadPath: '$(Pipeline.Workspace)'
+                
+                # Debug: Show what was downloaded (FIXED for Ubuntu)
+                - script: |
+                    echo "=== Downloaded files ==="
+                    ls -la $(Pipeline.Workspace)
+                    echo "=== Drop folder contents ==="
+                    ls -la $(Pipeline.Workspace)/drop/
+                  displayName: 'List downloaded files'
+                
+                # STEP 2: Deploy the zip to Azure
+                - task: AzureWebApp@1
+                  displayName: 'Deploy Web App to Azure'
+                  inputs:
+                    azureSubscription: 'AzurePractice-Prod-Connection'
+                    appType: 'webApp'
+                    appName: 'killvillpandhey'
+                    package: '$(Pipeline.Workspace)/drop/app.zip'
+                    deploymentMethod: 'zipDeploy'
+                
+                # STEP 3: Configure application settings
+                - task: AzureAppServiceSettings@1
+                  displayName: 'Configure Application Settings'
+                  inputs:
+                    azureSubscription: 'AzurePractice-Prod-Connection'
+                    appName: 'vardhanAppservice'
+                    resourceGroupName: 'AzurePractice'
+                    appSettings: |
+                      [
+                        {
+                          "name": "ASPNETCORE_ENVIRONMENT",
+                          "value": "Production",
+                          "slotSetting": false
+                        },
+                        {
+                          "name": "ConnectionStrings__DefaultConnection",
+                          "value": "$(DefaultConnection)",
+                          "slotSetting": false
+                        },
+                        {
+                          "name": "Jwt__Issuer",
+                          "value": "$(Jwt_Issuer)",
+                          "slotSetting": false
+                        },
+                        {
+                          "name": "Jwt__Audience",
+                          "value": "$(Jwt_Audience)",
+                          "slotSetting": false
+                        },
+                        {
+                          "name": "Jwt__Key",
+                          "value": "$(Jwt_Key)",
+                          "slotSetting": false
+                        }
+                      ]
