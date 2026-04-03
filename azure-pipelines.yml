@@ -97,7 +97,7 @@ stages:
                   inputs:
                     azureSubscription: 'AzurePractice-Prod-Connection'
                     appType: 'webApp'
-                    appName: 'vardhanAppservice'
+                    appName: 'killvillpandhey'
                     package: '$(Pipeline.Workspace)/drop/app.zip'
                     deploymentMethod: 'zipDeploy'
                 
