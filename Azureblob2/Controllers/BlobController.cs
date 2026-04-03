@@ -1,11 +1,10 @@
-﻿using Azureblob2.Data;
-using Microsoft.AspNetCore.Authorization;
+using Azureblob2.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace Azureblob2.Controllers
 {
-    public class BlobController : Controller
+    public class BlobController : ControllerBase
     {
         private readonly IBlobStorageService _blobService;
         private readonly JwtTokenService _jwtTokenService;
@@ -178,10 +177,6 @@ namespace Azureblob2.Controllers
             {
                 return Conflict(new { message = ex.Message });
             }
-        }
-        public class UserRequestDto
-        {
-            public string? UserId { get; set; }
         }
     }
 }
