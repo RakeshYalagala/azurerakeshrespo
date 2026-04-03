@@ -173,6 +173,23 @@ namespace Azureblob2.Controllers
                 return Conflict(new { message = ex.Message });
             }
         }
+
+        [HttpPost("GetByEmail")]
+        public async Task<IActionResult> GetUserByEmail([FromBody] UserEmailRequestDto request)
+        {
+            try
+            {
+                var user = await _blobService.GetUserByEmailAsync(request.Email);
+                if (user == null || !user.Any())
+                    return NotFound("User not found.");
+
+                return Ok(user);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
+        }
     }
 }
 

@@ -112,5 +112,17 @@ namespace Azureblob2.Controllers
 
             return await _context.userMaster.ToListAsync();
         }
+        public async Task<List<UserMaster>?> GetUserByEmailAsync(string? email)
+        {
+            if (!string.IsNullOrEmpty(email))
+            {
+                var user = await _context.userMaster
+                                         .Where(x => x.UserEmail == email)
+                                         .ToListAsync();
+                return user;
+            }
+
+            return null;
+        }
     }
 }

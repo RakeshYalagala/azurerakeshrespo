@@ -10,5 +10,6 @@ namespace Azureblob2.Controllers
         Task<string> UploadAsync(IFormFile file, CancellationToken cancellationToken = default);
         Task<UserMaster> CreateUserAsync(UserMaster userMaster);
         Task<List<UserMaster>?> GetUsersAsync(string? id);
+        Task<List<UserMaster>?> GetUserByEmailAsync(string? email);
     }
 }
