@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace Azureblob2.Data
 {
-  
+
         [Table("USER_MASTER", Schema = "dbo")]
         public class UserMaster
         {
