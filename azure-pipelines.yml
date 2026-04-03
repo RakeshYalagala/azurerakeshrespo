@@ -61,3 +61,78 @@ stages:
               PathtoPublish: '$(Build.ArtifactStagingDirectory)/app.zip'
               ArtifactName: 'drop'
             displayName: 'Upload Artifacts'
+
+  # ==================== DEPLOY STAGE ====================
+  - stage: Deploy
+    displayName: 'Deploy to Azure'
+    dependsOn: Publish
+    condition: succeeded()
+    variables:
+      - group: Secrets
+    jobs:
+      - deployment: DeployToAzure
+        displayName: 'Deploy Application to Azure App Service'
+        environment: 'production'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                # STEP 1: Download the artifact
+                - task: DownloadBuildArtifacts@1
+                  displayName: 'Download Artifacts from Cloud'
+                  inputs:
+                    buildType: 'current'
+                    artifactName: 'drop'
+                    downloadPath: '$(Pipeline.Workspace)'
+                
+                # Debug: Show what was downloaded
+                - script: |
+                    echo "=== Downloaded files ==="
+                    dir /s $(Pipeline.Workspace)
+                  displayName: 'List downloaded files'
+                
+                # STEP 2: Deploy the zip to Azure
+                - task: AzureWebApp@1
+                  displayName: 'Deploy Web App to Azure'
+                  inputs:
+                    azureSubscription: 'AzurePractice-Prod-Connection'
+                    appType: 'webApp'
+                    appName: 'vardhanAppservice'
+                    package: '$(Pipeline.Workspace)/drop/app.zip'
+                    deploymentMethod: 'zipDeploy'
+                
+                # STEP 3: Configure application settings
+                - task: AzureAppServiceSettings@1
+                  displayName: 'Configure Application Settings'
+                  inputs:
+                    azureSubscription: 'AzurePractice-Prod-Connection'
+                    appName: 'vardhanAppservice'
+                    resourceGroupName: 'AzurePractice'
+                    appSettings: |
+                      [
+                        {
+                          "name": "ASPNETCORE_ENVIRONMENT",
+                          "value": "Production",
+                          "slotSetting": false
+                        },
+                        {
+                          "name": "ConnectionStrings__DefaultConnection",
+                          "value": "$(DefaultConnection)",
+                          "slotSetting": false
+                        },
+                        {
+                          "name": "Jwt__Issuer",
+                          "value": "$(Jwt_Issuer)",
+                          "slotSetting": false
+                        },
+                        {
+                          "name": "Jwt__Audience",
+                          "value": "$(Jwt_Audience)",
+                          "slotSetting": false
+                        },
+                        {
+                          "name": "Jwt__Key",
+                          "value": "$(Jwt_Key)",
+                          "slotSetting": false
+                        }
+                      ]
