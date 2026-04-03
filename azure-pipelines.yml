@@ -85,10 +85,12 @@ stages:
                     artifactName: 'drop'
                     downloadPath: '$(Pipeline.Workspace)'
                 
-                # Debug: Show what was downloaded
+                # Debug: Show what was downloaded (FIXED for Ubuntu)
                 - script: |
                     echo "=== Downloaded files ==="
-                    dir /s $(Pipeline.Workspace)
+                    ls -la $(Pipeline.Workspace)
+                    echo "=== Drop folder contents ==="
+                    ls -la $(Pipeline.Workspace)/drop/
                   displayName: 'List downloaded files'
                 
                 # STEP 2: Deploy the zip to Azure
